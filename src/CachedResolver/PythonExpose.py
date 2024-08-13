@@ -22,6 +22,10 @@ class ResolverContext:
     RDOJSON_PREFIX = "rdojson:"
     DISABLE_ENV_VAR = "RDO_USD_CACHED_RESOLVER_DISABLE_SHOTGRID"
 
+    # We may have different asset IDs with similar publish/version query (because of subdir and relpath)
+    # Since we don't want to requery the same result we cache it
+    PUBLISHED_FILES_CACHE = {}
+
     @staticmethod
     def Initialize(context):  # pylint: disable=unused-argument
         """Initialize the context. This get's called on default and post mapping file path
@@ -86,39 +90,46 @@ class ResolverContext:
         """
         jsonStr = assetPath[len(ResolverContext.RDOJSON_PREFIX):]
         try:
-            json_data = json.loads(jsonStr)
+            jsonData = json.loads(jsonStr)
         except ValueError:
             LOG.error("Invalid JSON: %s", jsonStr)
             return
 
-        publishStr = json_data.get("publish", "")
-        try:
-            publish = manager.Publish.fromString(publishStr)
-        except ValueError:
-            LOG.error("Invalid publish: %s", publishStr)
-            return
-
-        version = json_data.get("version", "latestApprovedOrLatest")
-        if not isinstance(version, int):
+        publishStr = jsonData.get("publish", "")
+        version = jsonData.get("version", "latestApprovedOrLatest")
+        publishedFileCacheKey = (publishStr, version, )
+        publishedFile = ResolverContext.PUBLISHED_FILES_CACHE.get(publishedFileCacheKey)
+        if not publishedFile:
             try:
-                version = getattr(manager.version, version)
-            except AttributeError:
-                LOG.error("Invalid version string: %s", version)
+                publish = manager.Publish.fromString(publishStr)
+            except ValueError:
+                LOG.error("Invalid publish: %s", publishStr)
                 return
 
-        published_file = publish.version(version)
-        if not published_file:
-            LOG.error("No published file for version: %s", version)
-            return
+            if not isinstance(version, int):
+                try:
+                    version = getattr(manager.version, version)
+                except AttributeError:
+                    LOG.error("Invalid version string: %s", version)
+                    return
 
-        relpath = json_data.get("relpath")
+            publishedFile = publish.version(version)
+            if not publishedFile:
+                LOG.error("No published file for version: %s", version)
+                return
+
+            ResolverContext.PUBLISHED_FILES_CACHE[publishedFileCacheKey] = publishedFile
+        else:
+            LOG.debug("Reusing previous published file from cache: {}".format(str(publishedFileCacheKey)))
+
+        subdir = jsonData.get("subdir")
+        relpath = jsonData.get("relpath")
         if relpath:
-            return os.path.join(published_file.path.rootDirectory, relpath)
+            return os.path.join(publishedFile.path.rootDirectory, subdir or '', relpath)
 
         try:
-            subdir = json_data.get("subdir")
             if subdir:
-                return published_file.path.asDict().get(subdir, [])[0]
-            return published_file.path[0]
+                return publishedFile.path.asDict().get(subdir, [])[0]
+            return publishedFile.path[0]
         except IndexError:
             LOG.error("Unable to get published file path for asset: %s", assetPath)
