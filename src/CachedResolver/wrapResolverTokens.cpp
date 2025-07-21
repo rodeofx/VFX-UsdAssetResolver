@@ -1,40 +1,27 @@
 #include "resolverTokens.h"
 
-#include "boost_include_wrapper.h"
-#include BOOST_INCLUDE(python/class.hpp)
-
+#include <pybind11/pybind11.h>
 #include <string>
-
-using namespace AR_BOOST_NAMESPACE::python;
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-namespace {
-    class _WrapStaticToken {
-        public:
-            _WrapStaticToken(const TfToken* token) : _token(token) { }
-            std::string operator()() const
-            {
-                return _token->GetString();
-            }
-        private:
-            const TfToken* _token;
-    };
+namespace py = pybind11;
 
-    template <typename T>
-    void
-    _AddToken(T& cls, const char* name, const TfToken& token)
-    {
-        cls.add_static_property(name,
-                                make_function(_WrapStaticToken(&token),
-                                return_value_policy<return_by_value>(),
-                                AR_BOOST_NAMESPACE::mpl::vector1<std::string>()));
+namespace {
+    template <typename Cls>
+    void _AddToken(Cls& cls, const char* name, const TfToken& token) {
+        cls.def_property_readonly_static(
+            name,
+            [token](py::object /* self */) {
+                return token.GetString();
+            }
+            // REMOVE docstring entirely or replace with a literal if needed
+        );
     }
 }
 
-void wrapResolverTokens()
+void wrapResolverTokens(py::module_ &m)
 {
-    class_<CachedResolverTokensType, AR_BOOST_NAMESPACE::noncopyable>
-        cls("Tokens", no_init);
+    auto cls = py::class_<CachedResolverTokensType>(m, "Tokens", py::module_local());
     _AddToken(cls, "mappingPairs", CachedResolverTokens->mappingPairs);
 }

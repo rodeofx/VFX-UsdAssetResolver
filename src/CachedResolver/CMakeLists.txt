@@ -43,6 +43,7 @@ target_include_directories(${AR_CACHEDRESOLVER_TARGET_LIB}
     ${AR_BOOST_INCLUDE_DIR}
     ${AR_PYTHON_INCLUDE_DIR}
     ${AR_PXR_INCLUDE_DIR}
+    "$ENV{REZ_PYBIND11_ROOT}/include"
 )
 # Props
 # Remove default "lib" prefix

@@ -1,21 +1,17 @@
 #include "resolver.h"
 
 #include <pxr/pxr.h>
-
-#include "boost_include_wrapper.h"
-#include BOOST_INCLUDE(python/class.hpp)
-#include BOOST_INCLUDE(python/return_value_policy.hpp)
-
-using namespace AR_BOOST_NAMESPACE::python;
+#include <pybind11/pybind11.h>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-void
-wrapResolver()
+namespace py = pybind11;
+
+void wrapResolver(py::module_ &m)
 {
     using This = CachedResolver;
 
-    class_<This, bases<ArResolver>, AR_BOOST_NAMESPACE::noncopyable>
-        ("Resolver", no_init)
+    py::class_<This, ArResolver, std::shared_ptr<This>>(m, "Resolver")
+        .def(py::init<>())  // remove if your resolver is non-default-constructible
     ;
 }

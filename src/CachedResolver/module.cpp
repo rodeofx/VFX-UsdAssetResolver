@@ -1,9 +1,11 @@
-#include "pxr/pxr.h"
-#include "pxr/base/tf/pyModule.h"
+#include <pybind11/pybind11.h>
 
-TF_WRAP_MODULE
-{
-    TF_WRAP(Resolver);
-    TF_WRAP(ResolverContext);
-    TF_WRAP(ResolverTokens);
+void wrapResolver(pybind11::module_ &);
+void wrapResolverContext(pybind11::module_ &);
+void wrapResolverTokens(pybind11::module_ &);
+
+PYBIND11_MODULE(cachedResolver, m) {
+    wrapResolver(m);
+    wrapResolverContext(m);
+    wrapResolverTokens(m);
 }

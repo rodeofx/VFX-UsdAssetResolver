@@ -1,2 +1,2 @@
-/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake usd-25 cmake-3.30 python-3.11 gcctoolset-11  ./build.sh
+/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake usd-25 cmake-3.30 python-3.11 gcc_toolset-11 pybind11-2.9.2 --  ./build.sh
 #/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake houdini-19.5.435 -- scl enable devtoolset-6 ./build.sh
