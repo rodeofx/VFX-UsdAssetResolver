@@ -22,7 +22,9 @@ See the _Resolve method for more information.
 */
 static std::mutex g_resolver_query_mutex;
 
-PXR_NAMESPACE_USING_DIRECTIVE
+PXR_NAMESPACE_OPEN_SCOPE
+
+//PXR_NAMESPACE_USING_DIRECTIVE
 
 bool getStringEndswithString(const std::string &value, const std::string &compareValue)
 {
@@ -232,3 +234,4 @@ const std::string CachedResolverContext::ResolveAndCachePair(const std::string& 
     }
     return pythonResult;
 }
+PXR_NAMESPACE_CLOSE_SCOPE

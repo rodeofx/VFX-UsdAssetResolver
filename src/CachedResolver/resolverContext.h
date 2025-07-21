@@ -13,6 +13,8 @@
 #include <string>
 #include <map>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 /* Data Model
 We use an internal data struct that is accessed via a shared pointer
 as Usd currently creates resolver context copies when exposed via python
@@ -28,7 +30,7 @@ struct CachedResolverContextInternalData
     std::map<std::string, std::string> cachedPairs;
 };
 
-class CachedResolverContext
+class CachedResolverContext: public ArResolverContext
 {
 public:
     // Constructors
@@ -91,7 +93,7 @@ private:
     bool _GetMappingPairsFromUsdFile(const std::string& filePath);
 };
 
-PXR_NAMESPACE_OPEN_SCOPE
+
 AR_DECLARE_RESOLVER_CONTEXT(CachedResolverContext);
 PXR_NAMESPACE_CLOSE_SCOPE
 

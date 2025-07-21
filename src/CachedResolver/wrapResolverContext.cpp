@@ -71,8 +71,7 @@ wrapResolverContext(py::module_ &m)
              "Clear all caching pairs")
     ;
 
-    std::cout << "SSSSSSSSSSSSSSSSSSSSSSSSSSSs Registering CachedResolverContext for Python\n";
+    std::cout << "Registering CachedResolverContext for Python\n";
 
-    ArWrapResolverContextForPython<CachedResolverContext>();
-    //ArWrapResolverContextForPython<This>();
+    ArWrapResolverContextForPython<This>();
 }
