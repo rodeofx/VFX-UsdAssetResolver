@@ -70,5 +70,6 @@ wrapResolverContext(py::module_ &m)
              "Clear all caching pairs")
     ;
 
-    ArWrapResolverContextForPython<This>();
+    ArWrapResolverContextForPython<CachedResolverContext>();
+    //ArWrapResolverContextForPython<This>();
 }
