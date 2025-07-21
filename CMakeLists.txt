@@ -179,7 +179,7 @@ endif()
 
 # Boost
 if ("${AR_DIST_NAME}" STREQUAL "houdini")
-	set(AR_BOOST_NAMESPACE hboost)
+	set(AR_BOOST_NAMESPACE boost)
 else()
 	set(AR_BOOST_NAMESPACE boost)
 endif()
@@ -189,7 +189,7 @@ endif()
 # else()
 #     set(AR_BOOST_PYTHON_LIB ${AR_BOOST_NAMESPACE}_${AR_PYTHON_LIB_NUMBER})   
 # endif()
-#set(AR_BOOST_INCLUDE_DIR ${AR_PXR_INCLUDE_DIR}/${AR_BOOST_NAMESPACE})
+set(AR_BOOST_INCLUDE_DIR ${AR_PXR_INCLUDE_DIR}/${AR_BOOST_NAMESPACE})
 
 ### Init ###
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
