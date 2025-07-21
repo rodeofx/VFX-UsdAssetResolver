@@ -7,6 +7,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <string>
+#include <iostream>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -69,6 +70,8 @@ wrapResolverContext(py::module_ &m)
         .def("ClearCachingPairs", &This::ClearCachingPairs,
              "Clear all caching pairs")
     ;
+
+    std::cout << "SSSSSSSSSSSSSSSSSSSSSSSSSSSs Registering CachedResolverContext for Python\n";
 
     ArWrapResolverContextForPython<CachedResolverContext>();
     //ArWrapResolverContextForPython<This>();
