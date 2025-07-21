@@ -22,7 +22,7 @@
 #include <string>
 #include <regex>
 
-namespace python = AR_BOOST_NAMESPACE::python;
+//namespace python = AR_BOOST_NAMESPACE::python;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
