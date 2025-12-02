@@ -75,7 +75,7 @@ _ResolveAnchored(
     if (!anchorPath.empty()) {
         resolvedPath = TfStringCatPaths(anchorPath, path);
     }
-    return TfPathExists(resolvedPath) ? ArResolvedPath(TfAbsPath(resolvedPath)) : ArResolvedPath();
+    return ArResolvedPath(TfAbsPath(resolvedPath));
 }
 
 CachedResolver::CachedResolver() = default;
