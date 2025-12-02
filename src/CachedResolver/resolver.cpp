@@ -51,7 +51,7 @@ _AnchorRelativePath(
     const std::string& path)
 {
     if (TfIsRelativePath(anchorPath) ||
-        !_IsRelativePath(path)) {
+        !_IsFileRelativePath(path)) {
         return path;
     }
     // Ensure we are using forward slashes and not back slashes.
