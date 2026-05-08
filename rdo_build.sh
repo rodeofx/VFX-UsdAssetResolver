@@ -1,2 +1,3 @@
-/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 usd-25.05 --  ./build.sh
-/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 houdini-21.0 --  ./build.sh
+#/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 usd-25.05 --  ./build.sh
+#/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 houdini-21.0 --  ./build.sh
+/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-14 houdini-22.0 --  ./build.sh

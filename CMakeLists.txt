@@ -203,6 +203,16 @@ add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=${USES_CXX11_ABI})
 if (WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
+
+# Houdini 22 ships USD 25 with a buggy __has_include() probe in
+# pxr/base/work/workTBB/taskGraph_impl.h that finds the system
+# /usr/include/tbb/tbb_stddef.h (classic TBB) and activates legacy
+# code that fails to compile against Houdini's bundled oneTBB.
+# Pre-defining the file's include guard skips it, which matches the
+# intended behavior on oneTBB systems.
+if (UNIX AND "${AR_DIST_NAME}" STREQUAL "houdini" AND EXISTS "/usr/include/tbb/tbb_stddef.h")
+    add_compile_definitions(PXR_BASE_WORK_TBB_TASK_GRAPH_IMPL_H)
+endif()
 # Compiler Options
 # This is the same as set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHBOOST_ALL_NO_LIB -D_GLIBCXX_USE_CXX11_ABI=0")
 if (WIN32)
