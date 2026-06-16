@@ -47,6 +47,14 @@ target_include_directories(${AR_CACHEDRESOLVER_TARGET_LIB}
 # Props
 # Remove default "lib" prefix
 set_target_properties(${AR_CACHEDRESOLVER_TARGET_LIB} PROPERTIES PREFIX "")
+# RPATH: bake in the absolute USD/Python lib dirs (and $ORIGIN) so the installed
+# resolver can locate its dependencies without relying on LD_LIBRARY_PATH.
+if (NOT WIN32)
+    set_target_properties(${AR_CACHEDRESOLVER_TARGET_LIB} PROPERTIES
+        INSTALL_RPATH "$ORIGIN;${AR_PXR_LIB_DIR};${AR_PYTHON_LIB_DIR}"
+        INSTALL_RPATH_USE_LINK_PATH OFF
+    )
+endif()
 # Preprocessor Defines (Same as #define)
 target_compile_definitions(${AR_CACHEDRESOLVER_TARGET_LIB}
     PRIVATE
@@ -93,6 +101,16 @@ target_include_directories(${AR_CACHEDRESOLVER_TARGET_PYTHON}
 set_target_properties(${AR_CACHEDRESOLVER_TARGET_PYTHON} PROPERTIES PREFIX "")
 if (WIN32)
     set_target_properties(${AR_CACHEDRESOLVER_TARGET_PYTHON} PROPERTIES SUFFIX ".pyd")
+endif()
+# RPATH: the Python module installs to
+#   cachedResolver/lib/python/usdAssetResolver/CachedResolver/
+# so $ORIGIN/../../.. reaches the sibling cachedResolver.so in cachedResolver/lib.
+# Also bake in the absolute USD/Python lib dirs.
+if (NOT WIN32)
+    set_target_properties(${AR_CACHEDRESOLVER_TARGET_PYTHON} PROPERTIES
+        INSTALL_RPATH "$ORIGIN/../../..;${AR_PXR_LIB_DIR};${AR_PYTHON_LIB_DIR}"
+        INSTALL_RPATH_USE_LINK_PATH OFF
+    )
 endif()
 # Preprocessor Defines (Same as #define)
 target_compile_definitions(${AR_CACHEDRESOLVER_TARGET_PYTHON}
