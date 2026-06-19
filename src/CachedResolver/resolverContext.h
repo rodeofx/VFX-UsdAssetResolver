@@ -89,6 +89,9 @@ private:
     std::string emptyString{""};
     // Methods
     bool _GetMappingPairsFromUsdFile(const std::string& filePath);
+    // Expand ${VAR} environment variable tokens in a mapping pair value.
+    // Missing env vars fall back to the table defined in PythonExpose.py.
+    std::string _ExpandEnvVars(const std::string& value) const;
 };
 
 PXR_NAMESPACE_OPEN_SCOPE

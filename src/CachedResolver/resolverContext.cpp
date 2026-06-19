@@ -5,10 +5,13 @@
 #include "resolverTokens.h"
 
 #include "pxr/pxr.h"
+#include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/getenv.h"
 #include "pxr/base/tf/pathUtils.h"
 #include "pxr/base/tf/pyInvoke.h"
 #include <pxr/usd/sdf/layer.h>
+
+#include <regex>
 
 #include <iostream>
 #include <mutex>
@@ -137,9 +140,43 @@ bool CachedResolverContext::_GetMappingPairsFromUsdFile(const std::string& fileP
         return false;
     }
     for (size_t i = 0; i < mappingDataArray.size(); i+=2) {
-        this->AddMappingPair(mappingDataArray[i], mappingDataArray[i+1]);
+        this->AddMappingPair(mappingDataArray[i], this->_ExpandEnvVars(mappingDataArray[i+1]));
     }
     return true;
+}
+
+std::string CachedResolverContext::_ExpandEnvVars(const std::string& value) const
+{
+    if (value.find("${") == std::string::npos) {
+        return value;
+    }
+    static const std::regex envVarPattern(R"(\$\{(\w+)\})");
+    std::string result;
+    std::sregex_iterator it(value.begin(), value.end(), envVarPattern);
+    std::sregex_iterator end;
+    size_t lastPos = 0;
+    for (; it != end; ++it) {
+        const std::smatch& match = *it;
+        result.append(value, lastPos, static_cast<size_t>(match.position()) - lastPos);
+        const std::string varName = match[1].str();
+        // Environment takes precedence over the Python-defined fallback table.
+        std::string replacement = TfGetenv(varName);
+        if (replacement.empty()) {
+            TfPyInvokeAndExtract(DEFINE_STRING(AR_CACHEDRESOLVER_USD_PYTHON_EXPOSE_MODULE_NAME),
+                                 "ResolverContext.GetEnvVarFallback",
+                                 &replacement, varName);
+        }
+        if (replacement.empty()) {
+            TF_WARN("CachedResolver: undefined environment variable ${%s} in mapping value '%s'",
+                    varName.c_str(), value.c_str());
+            result.append(match[0].str());
+        } else {
+            result.append(replacement);
+        }
+        lastPos = static_cast<size_t>(match.position()) + static_cast<size_t>(match.length());
+    }
+    result.append(value, lastPos, value.size() - lastPos);
+    return result;
 }
 
 void CachedResolverContext::RefreshFromMappingFilePath(){

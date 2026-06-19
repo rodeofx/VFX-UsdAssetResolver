@@ -22,6 +22,13 @@ class ResolverContext:
     RDOJSON_PREFIX = "rdojson:"
     DISABLE_ENV_VAR = "RDO_USD_CACHED_RESOLVER_DISABLE_SHOTGRID"
 
+    # Fallback values used by the C++ resolver when a ${VAR} token in a mapping
+    # pair value is not defined in the environment. Lets a mapping file resolve
+    # even if the deployment hasn't exported every root, without baking absolute
+    # paths on disk. Populate per-var, e.g. {"RDO_SHOW_ROOT": "/proj/default"}.
+    ENV_VAR_FALLBACKS = {
+    }
+
     @staticmethod
     def Initialize(context):  # pylint: disable=unused-argument
         """Initialize the context. This get's called on default and post mapping file path
@@ -35,6 +42,24 @@ class ResolverContext:
             context (CachedResolverContext): The active context.
         """
         LOG.debug("CachedResolver.PythonExport.ResolverContext.Initialize")
+
+    @staticmethod
+    def GetEnvVarFallback(varName):
+        """Return the fallback value for an environment variable that is not
+        defined in the current environment, or an empty string if none is
+        registered.
+
+        Called from the C++ resolver while expanding ${VAR} tokens in mapping
+        pair values. An empty return means "no fallback"; the resolver then
+        leaves the token intact and warns.
+
+        Args:
+            varName (str): The name inside a ${VAR} token (without the ${} wrapper).
+
+        Returns:
+            str: The fallback value, or "" if none is registered.
+        """
+        return ResolverContext.ENV_VAR_FALLBACKS.get(varName, "")
 
     @staticmethod
     def ResolveAndCache(assetPath, context):
