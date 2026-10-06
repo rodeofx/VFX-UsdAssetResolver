@@ -1,2 +1,5 @@
-/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake usd-22.05-r2 -- scl enable devtoolset-6 ./build.sh
-/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake houdini-19.5.435 -- scl enable devtoolset-6 ./build.sh
+/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 nuke-16 tbb-2020.3 boost-1.85 --  ./build.sh
+#/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 nuke-17 tbb-2021.13.0 --  ./build.sh
+#/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 usd-25.05 --  ./build.sh
+#/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-11 houdini-21.0 --  ./build.sh
+#/rdo/rodeo/setup/rez/linux/current/bin/rez/rez env cmake cmake-3.30 python-3.11 gcc_toolset-14 houdini-22.0 --  ./build.sh

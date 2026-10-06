@@ -27,6 +27,8 @@ if(DEFINED ENV{HOUDINI_NETWORK_DIR})
 	set(AR_DIST_NAME houdini)	
 elseif(DEFINED ENV{MAYAUSD_NETWORK_DIR})
 	set(AR_DIST_NAME maya)	
+elseif(DEFINED ENV{REZ_NUKE_REAL_ROOT})
+	set(AR_DIST_NAME nuke)
 else()
 	set(AR_DIST_NAME usd)
 endif()
@@ -126,6 +128,30 @@ elseif ("${AR_DIST_NAME}" STREQUAL "maya")
     	set(AR_PXR_LIB_PREFIX "usd_")
     	set(AR_PYTHON_LIB_DIR ${AR_PYTHON_ROOT}/lib)
 	endif()	    	
+elseif ("${AR_DIST_NAME}" STREQUAL "nuke")
+	# Nuke ships its own USD build under <NUKE_ROOT>/FnUSD
+	set(AR_NUKE_ROOT $ENV{REZ_NUKE_REAL_ROOT} CACHE PATH "Nuke install directory")
+	set(AR_PXR_INCLUDE_DIR ${AR_NUKE_ROOT}/FnUSD/include)
+	set(AR_PXR_LIB_DIR ${AR_NUKE_ROOT}/FnUSD/lib)
+	# Nuke bundles libtbb but not its headers, which USD's public headers need.
+	# Use a TBB matching Nuke's bundled version (rez package tbb-2020.3 for Nuke 16, tbb-2021.13.0 for Nuke 17).
+	set(AR_TBB_INCLUDE_DIR $ENV{TBB_ROOT}/include CACHE PATH "TBB headers matching Nuke's bundled libtbb")
+	if (NOT EXISTS ${AR_TBB_INCLUDE_DIR}/tbb/tbb.h)
+		message(FATAL_ERROR "TBB headers not found in '${AR_TBB_INCLUDE_DIR}'. Nuke does not ship them: set TBB_ROOT (e.g. add tbb-2020.3 to the rez env) or AR_TBB_INCLUDE_DIR.")
+	endif()
+	# Linked explicitly so libtbb is a direct dependency resolved via our RPATH
+	# (Nuke's libusd_*.so carry no RPATH of their own).
+	if (EXISTS $ENV{TBB_ROOT}/lib64)
+		set(AR_TBB_LIB_DIR $ENV{TBB_ROOT}/lib64 CACHE PATH "TBB libs matching Nuke's bundled libtbb")
+	else()
+		set(AR_TBB_LIB_DIR $ENV{TBB_ROOT}/lib CACHE PATH "TBB libs matching Nuke's bundled libtbb")
+	endif()
+	set(AR_TBB_LIB tbb)
+	if (WIN32)
+    	set(AR_PXR_LIB_PREFIX "libusd_")
+	else()
+    	set(AR_PXR_LIB_PREFIX "usd_")
+	endif()
 else()
 	set(AR_USD_ROOT $ENV{USD_LOCATION} CACHE PATH "USD install directory")
 	set(AR_PXR_INCLUDE_DIR ${AR_USD_ROOT}/include)
@@ -160,6 +186,11 @@ elseif ("${AR_DIST_NAME}" STREQUAL "maya")
 	    set(AR_PYTHON_LIB_SITEPACKAGES ${AR_PYTHON_LIB_DIR}/${AR_PYTHON_LIB}/site-packages)
 	endif()
 	set(AR_PYTHON_INCLUDE_DIR ${AR_MAYA_INCLUDE_DIR}/Python$ENV{REZ_PYTHON_MAJOR_VERSION}$ENV{REZ_PYTHON_MINOR_VERSION}/Python)		
+elseif ("${AR_DIST_NAME}" STREQUAL "nuke")
+	# Nuke bundles libpythonX.Y.so at the install root
+	set(AR_PYTHON_LIB_DIR ${AR_NUKE_ROOT})
+	set(AR_PYTHON_LIB_SITEPACKAGES ${AR_NUKE_ROOT}/lib/${AR_PYTHON_LIB}/site-packages)
+	set(AR_PYTHON_INCLUDE_DIR ${AR_NUKE_ROOT}/include/${AR_PYTHON_LIB})
 else()
 	set(AR_PYTHON_ROOT $ENV{REZ_PYTHON_ROOT} CACHE PATH "Python install directory")
 	if (WIN32)
@@ -180,6 +211,10 @@ endif()
 # Boost
 if ("${AR_DIST_NAME}" STREQUAL "houdini")
 	set(AR_BOOST_NAMESPACE hboost)
+elseif ("${AR_DIST_NAME}" STREQUAL "nuke")
+	# Nuke ships boost::python renamed (bcp) to the foundryboost namespace
+	# (libfoundryboost_pythonXY.so) but no boost headers.
+	set(AR_BOOST_NAMESPACE foundryboost)
 else()
 	set(AR_BOOST_NAMESPACE boost)
 endif()
@@ -189,6 +224,20 @@ else()
     set(AR_BOOST_PYTHON_LIB ${AR_BOOST_NAMESPACE}_${AR_PYTHON_LIB_NUMBER})
 endif()
 set(AR_BOOST_INCLUDE_DIR ${AR_PXR_INCLUDE_DIR}/${AR_BOOST_NAMESPACE})
+if ("${AR_DIST_NAME}" STREQUAL "nuke")
+	# Use stock boost headers (e.g. rez package boost-1.85) remapped to the foundryboost namespace.
+	set(AR_NUKE_BOOST_INCLUDE_DIR $ENV{REZ_BOOST_ROOT}/include CACHE PATH "Stock boost headers to remap to Nuke's foundryboost")
+	if (NOT EXISTS ${AR_NUKE_BOOST_INCLUDE_DIR}/boost/python.hpp)
+		message(FATAL_ERROR "Boost headers not found in '${AR_NUKE_BOOST_INCLUDE_DIR}'. Nuke does not ship them: add boost to the rez env or set AR_NUKE_BOOST_INCLUDE_DIR.")
+	endif()
+	# Nuke's USD headers and boost's own computed includes reference <boost/...>,
+	# while BOOST_INCLUDE() and boost::-to-foundryboost:: remapped computed includes
+	# reference <foundryboost/...>: expose the headers under both names.
+	set(AR_BOOST_INCLUDE_DIR ${CMAKE_BINARY_DIR}/boost_include)
+	file(MAKE_DIRECTORY ${AR_BOOST_INCLUDE_DIR})
+	file(CREATE_LINK ${AR_NUKE_BOOST_INCLUDE_DIR}/boost ${AR_BOOST_INCLUDE_DIR}/boost SYMBOLIC)
+	file(CREATE_LINK ${AR_NUKE_BOOST_INCLUDE_DIR}/boost ${AR_BOOST_INCLUDE_DIR}/${AR_BOOST_NAMESPACE} SYMBOLIC)
+endif()
 
 ### Init ###
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
@@ -198,6 +247,10 @@ project(${AR_PROJECT_NAME} VERSION 1.0.0 LANGUAGES CXX)
 set(BUILD_SHARED_LIBS ON)
 # Preprocessor Defines (Same as #define)
 add_compile_definitions(HBOOST_ALL_NO_LIB BOOST_ALL_NO_LIB)
+if ("${AR_DIST_NAME}" STREQUAL "nuke")
+	# Mangle boost symbols to match Nuke's foundryboost libs
+	add_compile_definitions(boost=${AR_BOOST_NAMESPACE})
+endif()
 
 # check libusd_ar.so to see if was build with _GLIBCXX_USE_CXX11_ABI
 set(AR_DSO_FILE ${AR_PXR_LIB_DIR}/lib${AR_PXR_LIB_PREFIX}ar.so)		
@@ -224,8 +277,15 @@ include(setBoostNamespace)
 include_directories(${CMAKE_SOURCE_DIR}/src/utils)
 # Usd
 link_directories(${AR_PXR_LIB_DIR})
+# Tbb (Nuke only, see AR_TBB_INCLUDE_DIR)
+if (DEFINED AR_TBB_INCLUDE_DIR)
+    include_directories(${AR_TBB_INCLUDE_DIR})
+    link_directories(${AR_TBB_LIB_DIR})
+endif()
 # Python
 link_directories(${AR_PYTHON_LIB_DIR})
+# RPATH: absolute dependency lib dirs baked into the installed targets
+set(AR_RPATH_LIB_DIRS ${AR_PXR_LIB_DIR} ${AR_TBB_LIB_DIR} ${AR_PYTHON_LIB_DIR})
 
 ### Targets ###
 ## Maintained in this repo

@@ -36,6 +36,8 @@ target_link_libraries(${AR_CACHEDRESOLVER_TARGET_LIB}
     ${AR_PXR_LIB_PREFIX}ar
     ${AR_PXR_LIB_PREFIX}sdf
     ${AR_BOOST_PYTHON_LIB}
+    ${AR_TBB_LIB}
+    
 )
 # Headers
 target_include_directories(${AR_CACHEDRESOLVER_TARGET_LIB}
@@ -47,11 +49,11 @@ target_include_directories(${AR_CACHEDRESOLVER_TARGET_LIB}
 # Props
 # Remove default "lib" prefix
 set_target_properties(${AR_CACHEDRESOLVER_TARGET_LIB} PROPERTIES PREFIX "")
-# RPATH: bake in the absolute USD/Python lib dirs (and $ORIGIN) so the installed
+# RPATH: bake in the absolute USD/Python/TBB lib dirs (and $ORIGIN) so the installed
 # resolver can locate its dependencies without relying on LD_LIBRARY_PATH.
 if (NOT WIN32)
     set_target_properties(${AR_CACHEDRESOLVER_TARGET_LIB} PROPERTIES
-        INSTALL_RPATH "$ORIGIN;${AR_PXR_LIB_DIR};${AR_PYTHON_LIB_DIR}"
+        INSTALL_RPATH "$ORIGIN;${AR_RPATH_LIB_DIRS}"
         INSTALL_RPATH_USE_LINK_PATH OFF
     )
 endif()
@@ -105,10 +107,10 @@ endif()
 # RPATH: the Python module installs to
 #   cachedResolver/lib/python/usdAssetResolver/CachedResolver/
 # so $ORIGIN/../../.. reaches the sibling cachedResolver.so in cachedResolver/lib.
-# Also bake in the absolute USD/Python lib dirs.
+# Also bake in the absolute USD/Python/TBB lib dirs.
 if (NOT WIN32)
     set_target_properties(${AR_CACHEDRESOLVER_TARGET_PYTHON} PROPERTIES
-        INSTALL_RPATH "$ORIGIN/../../..;${AR_PXR_LIB_DIR};${AR_PYTHON_LIB_DIR}"
+        INSTALL_RPATH "$ORIGIN/../../..;${AR_RPATH_LIB_DIRS}"
         INSTALL_RPATH_USE_LINK_PATH OFF
     )
 endif()
