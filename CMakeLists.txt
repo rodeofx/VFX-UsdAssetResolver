@@ -139,6 +139,10 @@ elseif ("${AR_DIST_NAME}" STREQUAL "nuke")
 	if (NOT EXISTS ${AR_TBB_INCLUDE_DIR}/tbb/tbb.h)
 		message(FATAL_ERROR "TBB headers not found in '${AR_TBB_INCLUDE_DIR}'. Nuke does not ship them: set TBB_ROOT (e.g. add tbb-2021.13.0 to the rez env) or AR_TBB_INCLUDE_DIR.")
 	endif()
+	# Linked explicitly so libtbb is a direct dependency resolved via our RPATH
+	# (Nuke's libusd_*.so carry no RPATH of their own).
+	set(AR_TBB_LIB_DIR $ENV{TBB_ROOT}/lib64 CACHE PATH "oneTBB libs matching Nuke's bundled libtbb")
+	set(AR_TBB_LIB tbb)
 	if (WIN32)
     	set(AR_PXR_LIB_PREFIX "libusd_")
 	else()
@@ -255,9 +259,12 @@ link_directories(${AR_PXR_LIB_DIR})
 # Tbb (Nuke only, see AR_TBB_INCLUDE_DIR)
 if (DEFINED AR_TBB_INCLUDE_DIR)
     include_directories(${AR_TBB_INCLUDE_DIR})
+    link_directories(${AR_TBB_LIB_DIR})
 endif()
 # Python
 link_directories(${AR_PYTHON_LIB_DIR})
+# RPATH: absolute dependency lib dirs baked into the installed targets
+set(AR_RPATH_LIB_DIRS ${AR_PXR_LIB_DIR} ${AR_TBB_LIB_DIR} ${AR_PYTHON_LIB_DIR})
 
 ### Targets ###
 ## Maintained in this repo
