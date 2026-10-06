@@ -29,6 +29,8 @@ elseif(DEFINED ENV{MAYAUSD_NETWORK_DIR})
 	set(AR_DIST_NAME maya)	
 elseif(DEFINED ENV{REZ_NUKE_REAL_ROOT})
 	set(AR_DIST_NAME nuke)
+elseif(DEFINED ENV{REZ_MARI_REAL_ROOT})
+	set(AR_DIST_NAME mari)
 else()
 	set(AR_DIST_NAME usd)
 endif()
@@ -152,6 +154,25 @@ elseif ("${AR_DIST_NAME}" STREQUAL "nuke")
 	else()
     	set(AR_PXR_LIB_PREFIX "usd_")
 	endif()
+elseif ("${AR_DIST_NAME}" STREQUAL "mari")
+	# Mari ships Foundry's USD build (libfn*.so, 'fnpxr' python package, fnInternal_* namespace),
+	# boost (foundryboost), tbb and python libs in <MARI_ROOT>/3rdParty/lib, but none of their headers.
+	# Katana ships the matching headers (FnUSD 23.05, foundryboost 1.80, tbb 2020.3 for Mari 7.5).
+	# This is a mega big hack found by Claude, we'll see later if we really need the asset resolver in Mari
+	get_filename_component(AR_MARI_ROOT_DEFAULT $ENV{REZ_MARI_REAL_ROOT}/.. ABSOLUTE)
+	set(AR_MARI_ROOT ${AR_MARI_ROOT_DEFAULT} CACHE PATH "Mari install directory")
+	set(AR_MARI_SDK_DIR /rdo/software/katana/linux/Katana7.0v3/external CACHE PATH "Foundry SDK headers matching Mari's libs (FnUSD, foundryboost, tbb)")
+	if (NOT EXISTS ${AR_MARI_SDK_DIR}/FnUSD/include/pxr/pxr.h)
+		message(FATAL_ERROR "FnUSD headers not found in '${AR_MARI_SDK_DIR}'. Mari does not ship them: set AR_MARI_SDK_DIR to a Foundry SDK dir (e.g. <KATANA_ROOT>/external) matching Mari's USD version.")
+	endif()
+	set(AR_PXR_INCLUDE_DIR ${AR_MARI_SDK_DIR}/FnUSD/include)
+	set(AR_PXR_LIB_DIR ${AR_MARI_ROOT}/3rdParty/lib)
+	set(AR_PXR_LIB_PREFIX "fn")
+	set(AR_PXR_PYTHON_PACKAGE fnpxr)
+	set(AR_TBB_INCLUDE_DIR ${AR_MARI_SDK_DIR}/tbb/include)
+	# Linked explicitly so libtbb is a direct dependency resolved via our RPATH
+	set(AR_TBB_LIB_DIR ${AR_PXR_LIB_DIR})
+	set(AR_TBB_LIB tbb)
 else()
 	set(AR_USD_ROOT $ENV{USD_LOCATION} CACHE PATH "USD install directory")
 	set(AR_PXR_INCLUDE_DIR ${AR_USD_ROOT}/include)
@@ -191,6 +212,12 @@ elseif ("${AR_DIST_NAME}" STREQUAL "nuke")
 	set(AR_PYTHON_LIB_DIR ${AR_NUKE_ROOT})
 	set(AR_PYTHON_LIB_SITEPACKAGES ${AR_NUKE_ROOT}/lib/${AR_PYTHON_LIB}/site-packages)
 	set(AR_PYTHON_INCLUDE_DIR ${AR_NUKE_ROOT}/include/${AR_PYTHON_LIB})
+elseif ("${AR_DIST_NAME}" STREQUAL "mari")
+	# Mari bundles libpythonX.Y.so but no headers: use the rez python ones
+	set(AR_PYTHON_ROOT $ENV{REZ_PYTHON_ROOT} CACHE PATH "Python install directory")
+	set(AR_PYTHON_LIB_DIR ${AR_MARI_ROOT}/3rdParty/lib)
+	set(AR_PYTHON_LIB_SITEPACKAGES ${AR_PYTHON_LIB_DIR}/${AR_PYTHON_LIB}/site-packages)
+	set(AR_PYTHON_INCLUDE_DIR ${AR_PYTHON_ROOT}/include/${AR_PYTHON_LIB})
 else()
 	set(AR_PYTHON_ROOT $ENV{REZ_PYTHON_ROOT} CACHE PATH "Python install directory")
 	if (WIN32)
@@ -224,6 +251,11 @@ else()
     set(AR_BOOST_PYTHON_LIB ${AR_BOOST_NAMESPACE}_${AR_PYTHON_LIB_NUMBER})
 endif()
 set(AR_BOOST_INCLUDE_DIR ${AR_PXR_INCLUDE_DIR}/${AR_BOOST_NAMESPACE})
+if ("${AR_DIST_NAME}" STREQUAL "mari")
+	# Foundry's bcp'd headers keep the boost/ dir and alias namespace boost = foundryboost
+	set(AR_BOOST_PYTHON_LIB foundryboost_${AR_PYTHON_LIB_NUMBER})
+	set(AR_BOOST_INCLUDE_DIR ${AR_MARI_SDK_DIR}/foundryboost/include)
+endif()
 if ("${AR_DIST_NAME}" STREQUAL "nuke")
 	# Use stock boost headers (e.g. rez package boost-1.85) remapped to the foundryboost namespace.
 	set(AR_NUKE_BOOST_INCLUDE_DIR $ENV{REZ_BOOST_ROOT}/include CACHE PATH "Stock boost headers to remap to Nuke's foundryboost")
@@ -250,6 +282,13 @@ add_compile_definitions(HBOOST_ALL_NO_LIB BOOST_ALL_NO_LIB)
 if ("${AR_DIST_NAME}" STREQUAL "nuke")
 	# Mangle boost symbols to match Nuke's foundryboost libs
 	add_compile_definitions(boost=${AR_BOOST_NAMESPACE})
+endif()
+if ("${AR_DIST_NAME}" STREQUAL "mari")
+	# Foundry's USD names its public namespace fnpxr (PXR_NS) instead of pxr:
+	# force-include an alias so code spelling out pxr:: compiles.
+	set(AR_PXR_NS_ALIAS_HEADER ${CMAKE_BINARY_DIR}/pxrNamespaceAlias.h)
+	file(WRITE ${AR_PXR_NS_ALIAS_HEADER} "#pragma once\n#include \"pxr/pxr.h\"\nnamespace pxr = PXR_NS;\n")
+	add_compile_options(-include ${AR_PXR_NS_ALIAS_HEADER})
 endif()
 
 # check libusd_ar.so to see if was build with _GLIBCXX_USE_CXX11_ABI
@@ -286,6 +325,11 @@ endif()
 link_directories(${AR_PYTHON_LIB_DIR})
 # RPATH: absolute dependency lib dirs baked into the installed targets
 set(AR_RPATH_LIB_DIRS ${AR_PXR_LIB_DIR} ${AR_TBB_LIB_DIR} ${AR_PYTHON_LIB_DIR})
+list(REMOVE_DUPLICATES AR_RPATH_LIB_DIRS)
+# Python package USD's bindings are installed as (Mari renames it)
+if (NOT DEFINED AR_PXR_PYTHON_PACKAGE)
+    set(AR_PXR_PYTHON_PACKAGE pxr)
+endif()
 
 ### Targets ###
 ## Maintained in this repo

@@ -125,12 +125,19 @@ target_compile_definitions(${AR_CACHEDRESOLVER_TARGET_PYTHON}
         AR_CACHEDRESOLVER_USD_PYTHON_EXPOSE_MODULE_NAME=${AR_CACHEDRESOLVER_USD_PYTHON_EXPOSE_MODULE_NAME}
 )
 # Install
+# Python sources: point 'from pxr import' at the dist's USD python package (e.g. Mari: fnpxr)
+foreach(py_file __init__.py ${AR_CACHEDRESOLVER_USD_PYTHON_EXPOSE_MODULE_NAME}.py)
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/${py_file} py_content)
+    string(REGEX REPLACE "(^|\n)from pxr import" "\\1from ${AR_PXR_PYTHON_PACKAGE} import" py_content "${py_content}")
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python/${py_file} "${py_content}")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${py_file})
+endforeach()
 install (
-    FILES __init__.py
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/python/__init__.py
     DESTINATION ${AR_CACHEDRESOLVER_USD_PLUGIN_NAME}/lib/python/${AR_RESOLVER_USD_PYTHON_MODULE_NAME}/${AR_CACHEDRESOLVER_USD_PYTHON_MODULE_NAME}
 )
 install (
-    FILES ${AR_CACHEDRESOLVER_USD_PYTHON_EXPOSE_MODULE_NAME}.py
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/python/${AR_CACHEDRESOLVER_USD_PYTHON_EXPOSE_MODULE_NAME}.py
     DESTINATION ${AR_CACHEDRESOLVER_USD_PLUGIN_NAME}/lib/python
 )
 install(
